@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Expo
+.expo/
+dist/
+
+# Android build artifacts
+android/
+*.apk
+
+# iOS
+ios/
+
+# Environment & credentials
+.env
+.env.*
+.credentials
+google-services.json
+!google-services.json.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+*.tsbuildinfo
+
+# Claude
+.claude/
+
+# Video demos
+Video/

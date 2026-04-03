@@ -1,0 +1,4 @@
+# No build artifacts for plain Chrome extension, but exclude sensitive/dev files
+*.pem
+*.crx
+.DS_Store

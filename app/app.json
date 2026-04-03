@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "WorkSync",
+    "slug": "work-sync-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f1117"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#f5534a"
+      },
+      "package": "com.worksync.app",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4f8ef7"
+        }
+      ],
+      "expo-background-fetch",
+      "expo-task-manager",
+      "expo-font"
+    ],
+    "scheme": [
+      "worksync",
+      "com.googleusercontent.apps.YOUR_GOOGLE_CLIENT_ID"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    },
+    "owner": "YOUR_EXPO_USERNAME"
+  }
+}

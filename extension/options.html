@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WorkSync — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <h1>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="11"/>
+          <path d="M7 12l3 3 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        WorkSync Settings
+      </h1>
+      <p>Configure your integrations to start syncing tasks.</p>
+    </header>
+
+    <form id="settings-form">
+
+      <!-- ── Jira ── -->
+      <section class="card" id="card-jira">
+        <div class="card-header card-toggle" data-card="card-jira">
+          <div class="service-icon jira-icon">J</div>
+          <div class="card-header-text">
+            <h2>Jira</h2>
+            <p>Atlassian Jira Cloud integration</p>
+          </div>
+          <div class="status-dot" id="jira-status"></div>
+          <svg class="card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="jiraBaseUrl">Jira Base URL</label>
+              <input type="url" id="jiraBaseUrl" name="jiraBaseUrl"
+                placeholder="https://your-company.atlassian.net" autocomplete="off" />
+              <small>Your Jira Cloud domain (e.g. https://acme.atlassian.net)</small>
+            </div>
+
+            <div class="form-group">
+              <label for="jiraEmail">Email</label>
+              <input type="email" id="jiraEmail" name="jiraEmail"
+                placeholder="you@company.com" autocomplete="off" />
+            </div>
+
+            <div class="form-group">
+              <label for="jiraApiToken">API Token</label>
+              <div class="input-wrapper">
+                <input type="password" id="jiraApiToken" name="jiraApiToken"
+                  placeholder="Your Jira API token" autocomplete="off" />
+                <button type="button" class="toggle-pw" data-target="jiraApiToken">Show</button>
+              </div>
+              <small>Create one at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">id.atlassian.com</a></small>
+            </div>
+
+            <!-- State fields -->
+            <input type="hidden" id="jiraStatusName" name="jiraStatusName" />
+            <input type="hidden" id="jiraStatusNames" name="jiraStatusNames" />
+            <input type="hidden" id="jiraProjectKey" name="jiraProjectKey" />
+            <input type="hidden" id="jiraProjectName" name="jiraProjectName" />
+            <input type="hidden" id="jiraCustomFieldId" name="jiraCustomFieldId" />
+            <input type="hidden" id="jiraCustomFieldName" name="jiraCustomFieldName" />
+            <input type="hidden" id="jiraSortFieldId" name="jiraSortFieldId" />
+            <input type="hidden" id="jiraSortFieldName" name="jiraSortFieldName" />
+            <input type="hidden" id="jiraSortOrder" name="jiraSortOrder" />
+            <input type="hidden" id="jiraExcludeFieldIds" name="jiraExcludeFieldIds" />
+            <input type="hidden" id="jiraExcludeValues" name="jiraExcludeValues" />
+
+            <!-- Step 1 -->
+            <div class="form-group full step-block">
+              <div class="step-header">
+                <span class="step-num" id="step1-num">1</span>
+                <span class="step-label-text">Choose a Space</span>
+              </div>
+              <div class="board-selector">
+                <span id="project-selected-label" class="board-selected-label">No space selected</span>
+                <div class="board-btns">
+                  <button type="button" class="test-btn" id="btn-pick-project">Browse Spaces</button>
+                  <button type="button" class="test-btn clear-board-btn" id="btn-clear-project">Clear</button>
+                </div>
+              </div>
+              <div id="project-picker" class="board-picker hidden">
+                <ul id="project-list" class="board-list"></ul>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="form-group full step-block step-disabled" id="step-2-block">
+              <div class="step-header">
+                <span class="step-num" id="step2-num">2</span>
+                <span class="step-label-text">Choose a Field to Filter By</span>
+              </div>
+              <div class="chip-group" id="field-chips">
+                <span class="chip-hint">Select a space above to load available fields</span>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="form-group full step-block step-disabled" id="step-3-block">
+              <div class="step-header">
+                <span class="step-num" id="step3-num">3</span>
+                <span class="step-label-text">Choose Values to Sync</span>
+              </div>
+              <div class="board-picker" style="margin-top:6px">
+                <ul id="value-list" class="board-list">
+                  <li class="chip-hint" style="padding:10px;font-size:12px;color:var(--text3)">Select a field above to load values</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="form-group full step-block step-disabled" id="step-4-block">
+              <div class="step-header">
+                <span class="step-num">4</span>
+                <span class="step-label-text">Sort Issues By Field</span>
+              </div>
+              <div class="chip-group" id="sort-field-chips">
+                <span class="chip-hint">Complete step 2 to load available sort fields</span>
+              </div>
+              <ul id="sort-order-list" class="drag-list" style="margin-top:8px"></ul>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="form-group full step-block step-disabled" id="step-5-block">
+              <div class="step-header">
+                <span class="step-num">5</span>
+                <span class="step-label-text">Exclude Issues By Field Value</span>
+              </div>
+              <div class="chip-group" id="exclude-field-chips">
+                <span class="chip-hint">Complete step 2 to load available fields</span>
+              </div>
+              <div id="exclude-value-list" style="margin-top:8px"></div>
+            </div>
+          </div>
+
+          <button type="button" class="test-btn" id="test-jira">Test Connection</button>
+          <div class="test-result hidden" id="jira-test-result"></div>
+        </div>
+      </section>
+
+      <!-- ── External Review ── -->
+      <section class="card collapsed" id="card-ext">
+        <div class="card-header card-toggle" data-card="card-ext">
+          <div class="service-icon jira-icon" style="background:rgba(124,77,255,0.15);color:#7c4dff">LJ</div>
+          <div class="card-header-text">
+            <h2>External Review</h2>
+            <p>Separate Jira query — items appear as schedulable tasks</p>
+          </div>
+          <svg class="card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group full">
+              <small style="color:var(--text3)">Uses the same Jira credentials (URL, email, API token) as the main Jira section above.</small>
+            </div>
+
+            <!-- State fields -->
+            <input type="hidden" id="extProjectKey" name="extProjectKey" />
+            <input type="hidden" id="extProjectName" name="extProjectName" />
+            <input type="hidden" id="extCustomFieldId" name="extCustomFieldId" />
+            <input type="hidden" id="extCustomFieldName" name="extCustomFieldName" />
+            <input type="hidden" id="extStatusNames" name="extStatusNames" />
+            <input type="hidden" id="extSortFieldId" name="extSortFieldId" />
+            <input type="hidden" id="extSortFieldName" name="extSortFieldName" />
+            <input type="hidden" id="extSortOrder" name="extSortOrder" />
+            <input type="hidden" id="extExcludeFieldIds" name="extExcludeFieldIds" />
+            <input type="hidden" id="extExcludeValues" name="extExcludeValues" />
+
+            <!-- Step 1 -->
+            <div class="form-group full step-block">
+              <div class="step-header">
+                <span class="step-num">1</span>
+                <span class="step-label-text">Choose a Space</span>
+              </div>
+              <div class="board-selector">
+                <span id="ext-project-selected-label" class="board-selected-label">No space selected</span>
+                <div class="board-btns">
+                  <button type="button" class="test-btn" id="btn-ext-pick-project">Browse Spaces</button>
+                  <button type="button" class="test-btn clear-board-btn" id="btn-ext-clear-project">Clear</button>
+                </div>
+              </div>
+              <div id="ext-project-picker" class="board-picker hidden">
+                <ul id="ext-project-list" class="board-list"></ul>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="form-group full step-block step-disabled" id="step-ext-2-block">
+              <div class="step-header">
+                <span class="step-num">2</span>
+                <span class="step-label-text">Choose a Field to Filter By</span>
+              </div>
+              <div class="chip-group" id="ext-field-chips">
+                <span class="chip-hint">Select a space above to load available fields</span>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="form-group full step-block step-disabled" id="step-ext-3-block">
+              <div class="step-header">
+                <span class="step-num">3</span>
+                <span class="step-label-text">Choose Values to Sync</span>
+              </div>
+              <div class="board-picker" style="margin-top:6px">
+                <ul id="ext-value-list" class="board-list">
+                  <li class="chip-hint" style="padding:10px;font-size:12px;color:var(--text3)">Select a field above to load values</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="form-group full step-block step-disabled" id="step-ext-4-block">
+              <div class="step-header">
+                <span class="step-num">4</span>
+                <span class="step-label-text">Sort Issues By Field</span>
+              </div>
+              <div class="chip-group" id="ext-sort-field-chips">
+                <span class="chip-hint">Complete step 2 to load available sort fields</span>
+              </div>
+              <ul id="ext-sort-order-list" class="drag-list" style="margin-top:8px"></ul>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="form-group full step-block step-disabled" id="step-ext-5-block">
+              <div class="step-header">
+                <span class="step-num">5</span>
+                <span class="step-label-text">Exclude Issues By Field Value</span>
+              </div>
+              <div class="chip-group" id="ext-exclude-field-chips">
+                <span class="chip-hint">Complete step 2 to load available fields</span>
+              </div>
+              <div id="ext-exclude-value-list" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Slack ── -->
+      <section class="card" id="card-slack">
+        <div class="card-header card-toggle" data-card="card-slack">
+          <div class="service-icon slack-icon">#</div>
+          <div class="card-header-text">
+            <h2>Slack</h2>
+            <p>Slack workspace integration</p>
+          </div>
+          <div class="status-dot" id="slack-status"></div>
+          <svg class="card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="slackToken">Bot / User OAuth Token</label>
+              <div class="input-wrapper">
+                <input type="password" id="slackToken" name="slackToken"
+                  placeholder="xoxb-... or xoxp-..." autocomplete="off" />
+                <button type="button" class="toggle-pw" data-target="slackToken">Show</button>
+              </div>
+              <small>
+                Create a Slack App at <a href="https://api.slack.com/apps" target="_blank">api.slack.com/apps</a>
+                with scopes: <code>channels:history</code>, <code>groups:history</code>, <code>im:history</code>,
+                <code>channels:read</code>, <code>groups:read</code>, <code>im:read</code>, <code>mpim:read</code>, <code>users:read</code>,
+                <code>chat:write</code> (required for Daily Report)
+              </small>
+            </div>
+
+            <div class="form-group">
+              <label for="slackMyUserId">My Slack User ID</label>
+              <input type="text" id="slackMyUserId" name="slackMyUserId"
+                placeholder="U12345678" autocomplete="off" />
+              <small>Your personal ID so @mentions are detected. Click your avatar in Slack → Profile → ⋮ → <strong>Copy member ID</strong>.</small>
+            </div>
+
+            <div class="form-group full">
+              <label for="slackVipUsers">VIP User IDs</label>
+              <input type="text" id="slackVipUsers" name="slackVipUsers"
+                placeholder="U12345678, U87654321" autocomplete="off" />
+              <small>Comma-separated Slack User IDs. Messages from these people always surface, even without a mention.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="slackImportanceThreshold">Min. Importance Level</label>
+              <select id="slackImportanceThreshold" name="slackImportanceThreshold">
+                <option value="3">Medium (score ≥ 3)</option>
+                <option value="7" selected>High (score ≥ 7)</option>
+                <option value="10">Critical only (score ≥ 10)</option>
+              </select>
+            </div>
+
+            <div class="form-group full">
+              <label for="geminiApiKey">AI API Key (Groq)</label>
+              <div class="input-with-toggle">
+                <input type="password" id="geminiApiKey" name="geminiApiKey"
+                  placeholder="gsk_..." autocomplete="off" />
+                <button type="button" class="toggle-pw" data-target="geminiApiKey">Show</button>
+              </div>
+              <small>Free API key from <a href="https://console.groq.com/keys" target="_blank">Groq Console</a> — enables AI-powered context &amp; summary for each Slack message.</small>
+            </div>
+          </div>
+
+          <button type="button" class="test-btn" id="test-slack">Test Connection</button>
+          <div class="test-result hidden" id="slack-test-result"></div>
+        </div>
+      </section>
+
+      <!-- ── Google Calendar ── -->
+      <section class="card" id="card-gcal">
+        <div class="card-header card-toggle" data-card="card-gcal">
+          <div class="service-icon gcal-icon">📅</div>
+          <div class="card-header-text">
+            <h2>Google Calendar</h2>
+            <p>OAuth2 via Web Auth Flow</p>
+          </div>
+          <div class="status-dot" id="gcal-status"></div>
+          <svg class="card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="googleClientId">OAuth Client ID</label>
+              <input type="text" id="googleClientId" name="googleClientId"
+                placeholder="XXXXXX.apps.googleusercontent.com" autocomplete="off" />
+              <small>
+                Create credentials at <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a>.
+                Use type <strong>Web application</strong>. Add
+                <code id="redirect-uri-hint">loading…</code>
+                as an Authorized Redirect URI.
+              </small>
+            </div>
+
+            <div class="form-group">
+              <label for="defaultCalendarId">Default Calendar</label>
+              <input type="text" id="defaultCalendarId" name="defaultCalendarId"
+                placeholder="primary" />
+              <small>Use "primary" or a specific calendar ID</small>
+            </div>
+          </div>
+
+          <button type="button" class="test-btn" id="test-gcal">Authorize Google Calendar</button>
+          <div class="test-result hidden" id="gcal-test-result"></div>
+        </div>
+      </section>
+
+      <!-- ── Daily Slack Report Bot ── -->
+      <section class="card collapsed" id="card-report">
+        <div class="card-header card-toggle" data-card="card-report">
+          <div class="service-icon report-icon">📊</div>
+          <div class="card-header-text">
+            <h2>Daily Slack Report Bot</h2>
+            <p>Post an automated daily summary to a Slack channel</p>
+          </div>
+          <label class="toggle-switch" onclick="event.stopPropagation()">
+            <input type="checkbox" id="reportEnabled" name="reportEnabled" />
+            <span class="toggle-track"></span>
+          </label>
+          <svg class="card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <div class="form-grid" id="report-fields">
+            <div class="form-group">
+              <label for="reportTime">Report Time</label>
+              <input type="time" id="reportTime" name="reportTime" value="09:00" />
+              <small>Time to post the daily report (your local time)</small>
+            </div>
+
+            <div class="form-group">
+              <label for="reportChannelId">Slack Channel ID</label>
+              <input type="text" id="reportChannelId" name="reportChannelId"
+                placeholder="C0123456789" autocomplete="off" />
+              <small>Right-click a channel in Slack → Copy link → ID is at the end</small>
+            </div>
+
+            <div class="form-group">
+              <label for="reportBotName">Bot Display Name</label>
+              <input type="text" id="reportBotName" name="reportBotName"
+                placeholder="WorkSync Bot" />
+              <small>Name shown as the message sender in Slack</small>
+            </div>
+
+            <div class="form-group">
+              <label>Include in Report</label>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="reportIncludeJira" name="reportIncludeJira" checked />
+                  Jira issues needing review
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="reportIncludeSlack" name="reportIncludeSlack" checked />
+                  Important Slack messages
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="test-btn" id="test-report">Send Test Report Now</button>
+          <div class="test-result hidden" id="report-test-result"></div>
+        </div>
+      </section>
+
+      <!-- ── Working Time ── -->
+      <section class="card" id="card-worktime">
+        <div class="card-header card-toggle" data-card="card-worktime">
+          <div class="service-icon sync-icon">🕐</div>
+          <div class="card-header-text">
+            <h2>Working Time</h2>
+            <p>Tasks will only be scheduled within these hours</p>
+          </div>
+          <svg class="card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <div class="work-schedule">
+            <div class="work-day-row">
+              <label class="work-day-toggle">
+                <input type="checkbox" id="workMon" name="workMon" checked />
+                <span class="work-day-label">Mon</span>
+              </label>
+              <input type="time" id="workMonStart" name="workMonStart" value="09:00" class="work-time-input" />
+              <span class="work-time-sep">–</span>
+              <input type="time" id="workMonEnd" name="workMonEnd" value="18:00" class="work-time-input" />
+            </div>
+            <div class="work-day-row">
+              <label class="work-day-toggle">
+                <input type="checkbox" id="workTue" name="workTue" checked />
+                <span class="work-day-label">Tue</span>
+              </label>
+              <input type="time" id="workTueStart" name="workTueStart" value="09:00" class="work-time-input" />
+              <span class="work-time-sep">–</span>
+              <input type="time" id="workTueEnd" name="workTueEnd" value="18:00" class="work-time-input" />
+            </div>
+            <div class="work-day-row">
+              <label class="work-day-toggle">
+                <input type="checkbox" id="workWed" name="workWed" checked />
+                <span class="work-day-label">Wed</span>
+              </label>
+              <input type="time" id="workWedStart" name="workWedStart" value="09:00" class="work-time-input" />
+              <span class="work-time-sep">–</span>
+              <input type="time" id="workWedEnd" name="workWedEnd" value="18:00" class="work-time-input" />
+            </div>
+            <div class="work-day-row">
+              <label class="work-day-toggle">
+                <input type="checkbox" id="workThu" name="workThu" checked />
+                <span class="work-day-label">Thu</span>
+              </label>
+              <input type="time" id="workThuStart" name="workThuStart" value="09:00" class="work-time-input" />
+              <span class="work-time-sep">–</span>
+              <input type="time" id="workThuEnd" name="workThuEnd" value="18:00" class="work-time-input" />
+            </div>
+            <div class="work-day-row">
+              <label class="work-day-toggle">
+                <input type="checkbox" id="workFri" name="workFri" checked />
+                <span class="work-day-label">Fri</span>
+              </label>
+              <input type="time" id="workFriStart" name="workFriStart" value="09:00" class="work-time-input" />
+              <span class="work-time-sep">–</span>
+              <input type="time" id="workFriEnd" name="workFriEnd" value="18:00" class="work-time-input" />
+            </div>
+            <div class="work-day-row">
+              <label class="work-day-toggle">
+                <input type="checkbox" id="workSat" name="workSat" />
+                <span class="work-day-label">Sat</span>
+              </label>
+              <input type="time" id="workSatStart" name="workSatStart" value="09:00" class="work-time-input" />
+              <span class="work-time-sep">–</span>
+              <input type="time" id="workSatEnd" name="workSatEnd" value="13:00" class="work-time-input" />
+            </div>
+            <div class="work-day-row">
+              <label class="work-day-toggle">
+                <input type="checkbox" id="workSun" name="workSun" />
+                <span class="work-day-label">Sun</span>
+              </label>
+              <input type="time" id="workSunStart" name="workSunStart" value="09:00" class="work-time-input" />
+              <span class="work-time-sep">–</span>
+              <input type="time" id="workSunEnd" name="workSunEnd" value="13:00" class="work-time-input" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Sync Settings ── -->
+      <section class="card" id="card-sync">
+        <div class="card-header card-toggle" data-card="card-sync">
+          <div class="service-icon sync-icon">⚙</div>
+          <div class="card-header-text">
+            <h2>Sync Settings</h2>
+            <p>Control how often WorkSync checks for updates</p>
+          </div>
+          <svg class="card-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="syncInterval">Sync Interval</label>
+              <select id="syncInterval" name="syncInterval">
+                <option value="15">Every 15 minutes</option>
+                <option value="30" selected>Every 30 minutes</option>
+                <option value="60">Every hour</option>
+                <option value="120">Every 2 hours</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="enableNotifications" name="enableNotifications" checked />
+                Enable desktop notifications
+              </label>
+            </div>
+
+            <div class="form-group" style="grid-column: 1 / -1">
+              <label for="syncSecret">🔒 Sync Secret</label>
+              <input type="password" id="syncSecret" name="syncSecret"
+                placeholder="Enter a secret passphrase (same on app + extension)"
+                autocomplete="off" />
+              <small style="color:var(--text3);margin-top:4px;display:block">
+                Combined with your email to secure your Firestore document ID.
+                Set the same value on the mobile app. Never shared or stored in the cloud.
+              </small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <button type="submit" class="save-btn">Save Settings</button>
+        <button type="button" class="clear-btn" id="btn-clear">Clear All</button>
+      </div>
+
+      <div id="save-result" class="save-result hidden"></div>
+    </form>
+  </div>
+
+  <script src="settings-collapse.js"></script>
+  <script src="options.js" type="module"></script>
+</body>
+</html>

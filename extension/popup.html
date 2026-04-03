@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkSync</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <svg class="logo" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="header-title">WorkSync</span>
+    </div>
+    <div class="header-actions">
+      <button id="btn-theme" class="icon-btn" title="Toggle light/dark mode">
+        <!-- sun (shown in dark mode → click to go light) -->
+        <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <!-- moon (shown in light mode → click to go dark) -->
+        <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <button id="btn-sync" class="icon-btn" title="Sync now">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 4v6h6M23 20v-6h-6"/>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+        </svg>
+      </button>
+      <button id="btn-settings" class="icon-btn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="jira">
+      <span class="tab-icon">J</span>
+      Jira
+      <span class="badge" id="jira-count">0</span>
+    </button>
+    <button class="tab" data-tab="slack">
+      <span class="tab-icon">#</span>
+      Slack
+      <span class="badge" id="slack-count">0</span>
+    </button>
+    <button class="tab" data-tab="reminder">
+      <span class="tab-icon">📝</span>
+      Reminders
+      <span class="badge" id="reminder-count" style="display:none">0</span>
+    </button>
+    <button class="tab" data-tab="ext">
+      External Review
+      <span class="badge" id="ext-count" style="display:none">0</span>
+    </button>
+    <button class="tab" data-tab="calendar">
+      <span class="tab-icon">📅</span>
+      Schedule
+    </button>
+  </nav>
+
+  <!-- Sync status bar -->
+  <div class="status-bar" id="status-bar">
+    <span id="last-sync-text">Loading...</span>
+    <span id="sync-spinner" class="spinner hidden"></span>
+  </div>
+
+  <!-- Tab: Jira -->
+  <div class="tab-content active" id="tab-jira">
+    <div class="section-header">
+      <span>Needs Your Review</span>
+      <button class="text-btn" id="jira-select-all">Select all</button>
+    </div>
+    <div id="jira-list" class="item-list">
+      <div class="empty-state">
+        <p>No Jira issues found.</p>
+        <small>Issues where Design Status = "Need Your Review" will appear here.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Slack -->
+  <div class="tab-content hidden" id="tab-slack">
+    <div class="section-header">
+      <span>Important Messages</span>
+      <button class="text-btn" id="slack-select-all">Select all</button>
+    </div>
+    <div id="slack-list" class="item-list">
+      <div class="empty-state">
+        <p>No important Slack messages.</p>
+        <small>Messages that @mention you or DMs will appear here.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Reminders -->
+  <div class="tab-content hidden" id="tab-reminder">
+    <div class="section-header">
+      <span>Reminders</span>
+      <button class="text-btn" id="btn-add-reminder">+ Add</button>
+    </div>
+    <div id="reminder-list" class="item-list">
+      <div class="empty-state">
+        <p>No reminders yet.</p>
+        <small>Click "+ Add" to create a reminder you can schedule as a task.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: External Review -->
+  <div class="tab-content hidden" id="tab-ext">
+    <div class="section-header">
+      <span>External Review Tasks</span>
+      <button class="text-btn" id="ext-reschedule-overdue" style="display:none;color:var(--orange)">Reschedule overdue</button>
+    </div>
+    <div id="ext-list" class="item-list">
+      <div class="empty-state">
+        <p>No External Review issues found.</p>
+        <small>Configure External Review in Settings to load issues here.</small>
+      </div>
+    </div>
+    <div id="ext-result" class="event-result hidden" style="margin:8px 12px;border-radius:6px;padding:8px 12px;font-size:12px"></div>
+  </div>
+
+  <!-- Tab: Calendar -->
+  <div class="tab-content hidden" id="tab-calendar">
+    <div class="calendar-form">
+
+      <!-- Pending tasks -->
+      <div id="task-list-section">
+        <div class="section-header" style="padding: 0 0 6px 0;">
+          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text3)">Scheduled Tasks</span>
+          <button class="text-btn danger hidden" id="btn-reschedule-overdue">Reschedule overdue</button>
+        </div>
+        <div id="task-list">
+          <p class="preview-empty">No tasks scheduled yet.</p>
+        </div>
+      </div>
+
+      <div class="schedule-divider"></div>
+
+      <!-- New items -->
+      <div class="section-header" style="padding: 0 0 4px 0;">
+        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text3)">Add to Schedule</span>
+      </div>
+      <p class="form-subtitle" style="margin:0 0 8px 0;">Select Jira/Slack items — each gets a 20-min slot, Mon–Fri 9 AM–6 PM.</p>
+
+      <div class="selected-preview" id="selected-preview">
+        <p class="preview-empty">No items selected. Go to Jira or Slack tabs to select items.</p>
+      </div>
+
+      <button class="primary-btn" id="btn-create-event" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        Schedule Tasks
+      </button>
+
+      <div id="event-result" class="event-result hidden"></div>
+    </div>
+  </div>
+
+  <!-- Error banner -->
+  <div id="error-banner" class="error-banner hidden"></div>
+
+  <!-- Not configured overlay -->
+  <div id="not-configured" class="overlay hidden">
+    <div class="overlay-content">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="overlay-icon">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <h3>Setup Required</h3>
+      <p>Configure your Jira, Slack, and Google Calendar credentials to get started.</p>
+      <button class="primary-btn" id="btn-open-settings">Open Settings</button>
+    </div>
+  </div>
+
+  <script src="theme.js"></script>
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
