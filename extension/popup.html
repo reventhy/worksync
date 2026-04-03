@@ -65,6 +65,11 @@
       Slack
       <span class="badge" id="slack-count">0</span>
     </button>
+    <button class="tab" data-tab="discord">
+      <span class="tab-icon">D</span>
+      Discord
+      <span class="badge" id="discord-count">0</span>
+    </button>
     <button class="tab" data-tab="reminder">
       <span class="tab-icon">📝</span>
       Reminders
@@ -110,6 +115,20 @@
       <div class="empty-state">
         <p>No important Slack messages.</p>
         <small>Messages that @mention you or DMs will appear here.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Discord -->
+  <div class="tab-content hidden" id="tab-discord">
+    <div class="section-header">
+      <span>Discord Messages</span>
+      <button class="text-btn" id="discord-select-all">Select all</button>
+    </div>
+    <div id="discord-list" class="item-list">
+      <div class="empty-state">
+        <p>No Discord messages.</p>
+        <small>Server messages and DMs collected by the Discord worker will appear here.</small>
       </div>
     </div>
   </div>
@@ -164,7 +183,7 @@
       <div class="section-header" style="padding: 0 0 4px 0;">
         <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text3)">Add to Schedule</span>
       </div>
-      <p class="form-subtitle" style="margin:0 0 8px 0;">Select Jira/Slack items — each gets a 20-min slot, Mon–Fri 9 AM–6 PM.</p>
+      <p class="form-subtitle" style="margin:0 0 8px 0;">Select Jira/Slack/Discord items — each gets a 20-min slot, Mon–Fri 9 AM–6 PM.</p>
 
       <div class="selected-preview" id="selected-preview">
         <p class="preview-empty">No items selected. Go to Jira or Slack tabs to select items.</p>

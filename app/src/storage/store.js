@@ -85,6 +85,7 @@ export async function getConfig() {
     'jiraSortFieldId', 'jiraSortFieldName', 'jiraSortOrder',
     'jiraExcludeFieldIds', 'jiraExcludeValues',
     'slackToken', 'slackMyUserId', 'slackVipUsers',
+    'worksyncDocId',
     'googleClientId', 'defaultCalendarId',
     'syncSecret', // local-only — never pushed to Firestore
     'workMon', 'workMonStart', 'workMonEnd',

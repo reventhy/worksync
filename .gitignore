@@ -19,6 +19,8 @@ ios/
 .credentials
 google-services.json
 !google-services.json.example
+discord-worker/service-account.json
+discord-worker/*.service-account.json
 
 # IDE
 .vscode/

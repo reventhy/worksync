@@ -29,6 +29,7 @@ const CONFIG_KEYS = [
   'syncInterval', 'enableNotifications',
   'reportEnabled', 'reportTime', 'reportChannelId', 'reportBotName',
   'reportIncludeJira', 'reportIncludeSlack',
+  'worksyncDocId',
 ];
 
 const CACHE_KEYS = [
@@ -40,10 +41,10 @@ const CACHE_KEYS = [
 ];
 
 async function _firebaseDocId() {
-  const { jiraEmail, syncSecret } = await new Promise(r =>
-    chrome.storage.local.get(['jiraEmail', 'syncSecret'], r)
+  const { worksyncDocId, jiraEmail, syncSecret } = await new Promise(r =>
+    chrome.storage.local.get(['worksyncDocId', 'jiraEmail', 'syncSecret'], r)
   );
-  return docIdFromEmail(jiraEmail, syncSecret);
+  return worksyncDocId?.trim() || docIdFromEmail(jiraEmail, syncSecret);
 }
 
 async function pushCacheToFirestore() {
@@ -84,7 +85,7 @@ async function pushCacheToFirestore() {
 
 async function pushConfigToFirestore(config) {
   try {
-    const docId = docIdFromEmail(config.jiraEmail, config.syncSecret);
+    const docId = config.worksyncDocId?.trim() || docIdFromEmail(config.jiraEmail, config.syncSecret);
     if (!docId) return;
     const data = {};
     for (const k of CONFIG_KEYS) {
@@ -303,7 +304,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg.action === 'getCache') {
-    chrome.storage.local.get(['jiraIssues', 'slackMessages', 'lastSync', 'jiraError', 'slackError'], sendResponse);
+    chrome.storage.local.get(['jiraIssues', 'slackMessages', 'discordMessages', 'lastSync', 'jiraError', 'slackError'], sendResponse);
     return true;
   }
   if (msg.action === 'createCalendarEvent') {
@@ -664,6 +665,20 @@ async function scheduleTaskItems({ items = [] } = {}) {
         item.priority ? `Priority: ${item.priority}` : null,
         item.url ? `→ ${item.url}` : null,
       ].filter(Boolean).join('\n');
+    } else if (item.type === 'discord') {
+      const preview = (item.text || item.excerpt || '').replace(/\s+/g, ' ').slice(0, 200);
+      const scopeLabel = item.isDM
+        ? `DM with ${item.userName || item.user || 'user'}`
+        : `${item.guildName || 'Server'} · #${item.channelName}`;
+      title = item.isDM
+        ? `[Discord] DM: ${(item.userName || item.user || 'message').slice(0, 40)}`
+        : `[Discord] #${item.channelName}: ${(item.excerpt || item.text || '').replace(/\s+/g, ' ').slice(0, 60)}`;
+      description = [
+        `Scope: ${scopeLabel}`,
+        `Importance: ${item.importanceLabel}`,
+        preview ? `\n${preview}` : null,
+        item.url ? `→ ${item.url}` : null,
+      ].filter(Boolean).join('\n');
     } else {
       const preview = item.text.replace(/<[^>]+>/g, '').slice(0, 200);
       title = `[Slack] #${item.channelName}: ${item.text.replace(/<[^>]+>/g, '').slice(0, 60)}`;
@@ -696,7 +711,7 @@ async function scheduleTaskItems({ items = [] } = {}) {
       done: false,
       createdAt: new Date().toISOString(),
       sourceType: item.type,
-      sourceId: item.type === 'jira' ? item.key : item.id,
+      sourceId: item.type === 'jira' ? item.key : (item.ts || item.id || item.messageId),
       filterFieldValue: item.type === 'jira' ? (item.filterFieldValue ?? null) : null,
     };
     created.push(task);

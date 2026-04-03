@@ -61,10 +61,12 @@ export const CACHE_SYNC_KEYS = [
 ];
 
 async function getDocId() {
-  const [email, secret] = await Promise.all([
+  const [explicitDocId, email, secret] = await Promise.all([
+    store.get('worksyncDocId'),
     store.get('jiraEmail'),
     store.get('syncSecret'),
   ]);
+  if (explicitDocId) return String(explicitDocId).trim();
   return docIdFromEmail(email, secret);
 }
 

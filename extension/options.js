@@ -27,6 +27,7 @@ const FIELDS = [
   'syncInterval', 'enableNotifications',
   'reportEnabled', 'reportTime', 'reportChannelId', 'reportBotName',
   'reportIncludeJira', 'reportIncludeSlack',
+  'worksyncDocId', // local-only Firestore doc override
   'syncSecret', // local-only — never pushed to Firestore
 ];
 
@@ -111,9 +112,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function _pullFirestoreIntoStorage() {
   try {
     const local = await new Promise(r =>
-      chrome.storage.local.get(['jiraEmail', '_configPushedAt'], r)
+      chrome.storage.local.get(['worksyncDocId', 'jiraEmail', 'syncSecret', '_configPushedAt'], r)
     );
-    const docId = docIdFromEmail(local.jiraEmail);
+    const docId = local.worksyncDocId?.trim() || docIdFromEmail(local.jiraEmail, local.syncSecret);
     if (!docId) return;
 
     const remote = await firestoreGet('worksync_config', docId);
@@ -219,7 +220,7 @@ function setupForm() {
 
     // Push config to Firestore for cross-device sync (fire-and-forget)
     // Only push non-empty values so we never overwrite the app's valid data with blank fields
-    const docId = docIdFromEmail(data.jiraEmail, data.syncSecret);
+    const docId = data.worksyncDocId?.trim() || docIdFromEmail(data.jiraEmail, data.syncSecret);
     if (docId) {
       const filtered = { _configPushedAt: ts };
       for (const [k, v] of Object.entries(data)) {

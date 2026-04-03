@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 
 import JiraScreen from '../screens/JiraScreen';
 import SlackScreen from '../screens/SlackScreen';
+import DiscordScreen from '../screens/DiscordScreen';
 import RemindersScreen from '../screens/RemindersScreen';
 import TasksScreen from '../screens/TasksScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -14,10 +15,11 @@ import SettingsScreen from '../screens/SettingsScreen';
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-  const { jiraIssues, slackMessages, reminders, scheduledTasks } = useApp();
+  const { jiraIssues, slackMessages, discordMessages, reminders, scheduledTasks } = useApp();
   const { colors, isDark, toggleTheme } = useTheme();
 
   const urgentSlack = slackMessages.filter(m => m.importance >= 3).length;
+  const urgentDiscord = discordMessages.filter(m => m.importance >= 3).length;
   const overdueCount = scheduledTasks.filter(
     t => !t.done && new Date(t.startTime) < new Date()
   ).length;
@@ -43,6 +45,7 @@ export default function TabNavigator() {
           const icons = {
             Jira:     focused ? 'bug'          : 'bug-outline',
             Slack:    focused ? 'chatbubbles'  : 'chatbubbles-outline',
+            Discord:  focused ? 'logo-discord' : 'logo-discord',
             Reminders:focused ? 'bookmark'     : 'bookmark-outline',
             Tasks:    focused ? 'calendar'     : 'calendar-outline',
             Settings: focused ? 'settings'     : 'settings-outline',
@@ -80,6 +83,14 @@ export default function TabNavigator() {
         options={{
           tabBarBadge: urgentSlack > 0 ? urgentSlack : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.warning, fontSize: 10 },
+        }}
+      />
+      <Tab.Screen
+        name="Discord"
+        component={DiscordScreen}
+        options={{
+          tabBarBadge: urgentDiscord > 0 ? urgentDiscord : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.accent, fontSize: 10 },
         }}
       />
       <Tab.Screen

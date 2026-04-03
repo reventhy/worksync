@@ -192,6 +192,7 @@ export default function SettingsScreen() {
     jiraSortFieldId: '', jiraSortFieldName: '', jiraSortOrder: '',
     jiraExcludeFieldIds: '', jiraExcludeValues: '',
     slackToken: '', slackMyUserId: '', slackVipUsers: '',
+    worksyncDocId: '',
     syncSecret: '',
     googleClientId: '', defaultCalendarId: 'primary',
     workMonStart: '09:00', workMonEnd: '18:00',
@@ -305,7 +306,7 @@ export default function SettingsScreen() {
 
     // If no credentials are found at all, auto-open the Import modal so the user
     // can bootstrap from their Chrome extension config without manually hunting for the button
-    if (!safeConfig.jiraEmail && !safeConfig.jiraBaseUrl) {
+    if (!safeConfig.jiraEmail && !safeConfig.jiraBaseUrl && !safeConfig.worksyncDocId) {
       setTimeout(() => setShowImportModal(true), 400);
       return;
     }
@@ -857,6 +858,17 @@ export default function SettingsScreen() {
             placeholder="Enter a secret passphrase"
             placeholderTextColor={C.muted}
             secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </Field>
+        <Field label="🧭 WorkSync Doc ID" hint="Optional override for Firestore doc lookup. Leave blank for the normal jiraEmail + syncSecret flow." colors={C}>
+          <TextInput
+            style={s.input}
+            value={str('worksyncDocId')}
+            onChangeText={v => update('worksyncDocId', v)}
+            placeholder="worksync_discord_test"
+            placeholderTextColor={C.muted}
             autoCapitalize="none"
             autoCorrect={false}
           />

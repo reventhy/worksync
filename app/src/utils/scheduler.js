@@ -66,6 +66,22 @@ export async function scheduleTaskItems(items = []) {
       ]
         .filter(Boolean)
         .join('\n');
+    } else if (item.type === 'discord') {
+      const preview = (item.text || item.excerpt || '').replace(/\s+/g, ' ').slice(0, 200);
+      const scopeLabel = item.isDM
+        ? `DM with ${item.userName || item.user || 'user'}`
+        : `${item.guildName || 'Server'} · #${item.channelName}`;
+      title = item.isDM
+        ? `[Discord] DM: ${(item.userName || item.user || 'message').slice(0, 40)}`
+        : `[Discord] #${item.channelName}: ${(item.excerpt || item.text || '').replace(/\s+/g, ' ').slice(0, 60)}`;
+      description = [
+        `Scope: ${scopeLabel}`,
+        `Importance: ${item.importanceLabel}`,
+        preview ? `\n${preview}` : null,
+        item.url ? `→ ${item.url}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
     } else {
       const preview = item.text.replace(/<[^>]+>/g, '').slice(0, 200);
       title = `[Slack] #${item.channelName}: ${item.text.replace(/<[^>]+>/g, '').slice(0, 60)}`;

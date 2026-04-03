@@ -1,9 +1,11 @@
 import { firestorePatch, firestoreGet, docIdFromEmail } from './firebase.js';
 
 // State
-const selected = { jira: new Set(), slack: new Set(), reminder: new Set() };
+const selected = { jira: new Set(), slack: new Set(), discord: new Set(), reminder: new Set() };
 let jiraIssues = [];
 let slackMessages = [];
+let discordMessages = [];
+let discordMentionsSummary = null;
 let scheduledTasks = [];
 let reminders = [];
 let jiraCustomFieldValues = [];
@@ -39,16 +41,16 @@ const CONFIG_KEYS = [
 ];
 
 const CACHE_KEYS = [
-  'jiraIssues', 'slackMessages', 'scheduledTasks', 'reminders',
+  'jiraIssues', 'slackMessages', 'discordMessages', 'discordMentionsSummary', 'scheduledTasks', 'reminders',
   'jiraCustomFieldValues', 'jiraBaseUrl', 'lastSync',
 ];
 
 async function _pullFirestoreOnOpen() {
   try {
     const local = await new Promise(r =>
-      chrome.storage.local.get(['jiraEmail', 'syncSecret', '_configPushedAt', '_cachePushedAt'], r)
+      chrome.storage.local.get(['worksyncDocId', 'jiraEmail', 'syncSecret', '_configPushedAt', '_cachePushedAt', 'discordMessages'], r)
     );
-    const docId = docIdFromEmail(local.jiraEmail, local.syncSecret);
+    const docId = local.worksyncDocId?.trim() || docIdFromEmail(local.jiraEmail, local.syncSecret);
     if (!docId) return;
 
     const [remoteConfig, remoteCache] = await Promise.all([
@@ -80,7 +82,8 @@ async function _pullFirestoreOnOpen() {
     if (remoteCache && Object.keys(remoteCache).length) {
       const localTs  = Number(local._cachePushedAt || 0);
       const remoteTs = Number(remoteCache._cachePushedAt || 0);
-      const shouldApply = remoteTs > 0 && (localTs === 0 || remoteTs > localTs);
+      const forceDiscordPull = !!local.worksyncDocId?.trim() && (!Array.isArray(local.discordMessages) || local.discordMessages.length === 0) && Array.isArray(remoteCache.discordMessages) && remoteCache.discordMessages.length > 0;
+      const shouldApply = forceDiscordPull || (remoteTs > 0 && (localTs === 0 || remoteTs > localTs));
       if (shouldApply) {
         const toSet = {};
         for (const [k, v] of Object.entries(remoteCache)) {
@@ -141,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function isConfigured(config) {
-  return !!(config.jiraBaseUrl && config.jiraEmail && config.jiraApiToken && config.slackToken);
+  return !!(config.worksyncDocId || (config.jiraBaseUrl && config.jiraEmail && config.jiraApiToken && config.slackToken));
 }
 
 async function getConfig() {
@@ -167,10 +170,12 @@ function setupTabs() {
 async function loadFromCache() {
   // Read directly from storage — avoids service worker wake-up issues in MV3
   const data = await new Promise(r =>
-    chrome.storage.local.get(['jiraIssues', 'slackMessages', 'lastSync', 'jiraError', 'slackError', 'slackDebug', 'scheduledTasks', 'reminders', 'jiraCustomFieldValues', 'jiraCustomFieldId', 'jiraCustomFieldName', 'jiraBaseUrl', 'extIssues', 'extDoneKeys'], r)
+    chrome.storage.local.get(['jiraIssues', 'slackMessages', 'discordMessages', 'discordMentionsSummary', 'lastSync', 'jiraError', 'slackError', 'slackDebug', 'scheduledTasks', 'reminders', 'jiraCustomFieldValues', 'jiraCustomFieldId', 'jiraCustomFieldName', 'jiraBaseUrl', 'extIssues', 'extDoneKeys'], r)
   );
   jiraIssues = data.jiraIssues || [];
   slackMessages = data.slackMessages || [];
+  discordMessages = data.discordMessages || [];
+  discordMentionsSummary = data.discordMentionsSummary || null;
   scheduledTasks = data.scheduledTasks || [];
   reminders = data.reminders || [];
   jiraCustomFieldId = data.jiraCustomFieldId || null;
@@ -197,9 +202,13 @@ async function loadFromCache() {
   const scheduledSlackIds = new Set(
     scheduledTasks.filter(t => !t.done && t.sourceType === 'slack').map(t => t.sourceId)
   );
+  const scheduledDiscordIds = new Set(
+    scheduledTasks.filter(t => !t.done && t.sourceType === 'discord').map(t => t.sourceId)
+  );
 
   renderJira(jiraIssues.filter(i => !scheduledJiraKeys.has(i.key)));
   renderSlack(slackMessages.filter(m => !scheduledSlackIds.has(m.ts)));
+  renderDiscord(discordMessages.filter(m => !scheduledDiscordIds.has(m.ts)));
   renderScheduledTasks(scheduledTasks);
   renderReminders();
   renderExtReview();
@@ -218,6 +227,7 @@ function setupActions() {
   document.getElementById('btn-sync').addEventListener('click', handleSync);
   document.getElementById('jira-select-all').addEventListener('click', () => toggleSelectAll('jira'));
   document.getElementById('slack-select-all').addEventListener('click', () => toggleSelectAll('slack'));
+  document.getElementById('discord-select-all').addEventListener('click', () => toggleSelectAll('discord'));
   document.getElementById('btn-create-event').addEventListener('click', handleScheduleTasks);
   document.getElementById('btn-reschedule-overdue').addEventListener('click', handleRescheduleOverdue);
   document.getElementById('ext-reschedule-overdue').addEventListener('click', handleRescheduleOverdue);
@@ -232,13 +242,17 @@ async function handleSync() {
   document.getElementById('last-sync-text').textContent = 'Syncing...';
 
   try {
-    await new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: 'sync' }, (res) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-        else if (res?.ok) resolve();
-        else reject(new Error(res?.error || 'Sync failed'));
+    await _pullFirestoreOnOpen();
+    const config = await getConfig();
+    if (config.jiraBaseUrl && config.jiraEmail && config.jiraApiToken && config.slackToken) {
+      await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({ action: 'sync' }, (res) => {
+          if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+          else if (res?.ok) resolve();
+          else reject(new Error(res?.error || 'Sync failed'));
+        });
       });
-    });
+    }
   } catch (e) {
     showError(e.message);
   } finally {
@@ -372,6 +386,95 @@ function renderSlack(messages) {
   appendSection(regularMsgs, '💬 Important Messages',  false);
 }
 
+// ── Render Discord ────────────────────────────────────────────────────────────
+
+function renderDiscord(messages) {
+  const list = document.getElementById('discord-list');
+  const important = messages.filter(m => m.importance >= 3);
+
+  if (!important.length) {
+    const summaryHtml = renderDiscordSummary();
+    list.innerHTML = `${summaryHtml}<div class="empty-state"><p>No Discord messages.</p><small>Keep the Discord worker running and send a new server message or DM to the bot.</small></div>`;
+    return;
+  }
+
+  const dms = important.filter(m => m.isDM);
+  const servers = important.filter(m => !m.isDM);
+  list.innerHTML = renderDiscordSummary();
+
+  function appendSection(msgs, sectionTitle) {
+    if (!msgs.length) return;
+    const header = document.createElement('div');
+    header.className = 'slack-section-header';
+    header.innerHTML = `<span>${escHtml(sectionTitle)}</span><span class="slack-section-count">${msgs.length}</span>`;
+    list.appendChild(header);
+
+    for (const msg of msgs) {
+      const card = document.createElement('div');
+      const importanceClass = `importance-${msg.importanceLabel.toLowerCase()}`;
+      card.className = `slack-card discord-card ${importanceClass}`;
+      card.dataset.id = msg.ts;
+
+      const preview = (msg.excerpt || msg.text || '').slice(0, 160);
+      const time = relativeTime(new Date(Number(msg.ts)).toISOString());
+      const scope = msg.isDM
+        ? `DM · ${msg.userName || msg.user || 'Unknown user'}`
+        : `${msg.guildName || 'Discord'} · #${msg.channelName}`;
+
+      card.innerHTML = `
+        <div class="card-check"></div>
+        <div class="card-body">
+          <div class="card-meta">
+            <span class="meta-chip chip-channel">${escHtml(scope)}</span>
+            <span class="meta-chip chip-importance-${msg.importanceLabel.toLowerCase()}">${escHtml(msg.importanceLabel)}</span>
+            <span class="meta-chip chip-date">${time}</span>
+          </div>
+          <div class="card-key" style="color:var(--accent)">${escHtml(msg.userName || msg.user || 'Unknown user')}</div>
+          ${preview ? `<div class="card-text">${escHtml(preview)}</div>` : ''}
+          ${msg.reasons?.length ? `<div class="card-reasons">${msg.reasons.slice(0, 3).map(r => `· ${escHtml(r)}`).join(' ')}</div>` : ''}
+          ${msg.url ? `<a class="card-link" href="${escHtml(msg.url)}" target="_blank" rel="noopener">↗ Open in Discord</a>` : ''}
+        </div>
+      `;
+
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('a')) return;
+        toggleSelect(card, 'discord', msg.ts);
+      });
+
+      list.appendChild(card);
+    }
+  }
+
+  appendSection(dms, 'Direct Messages');
+  appendSection(servers, 'Server Messages');
+}
+
+function renderDiscordSummary() {
+  if (!discordMentionsSummary) return '';
+  const topUsers = (discordMentionsSummary.topUsers || [])
+    .slice(0, 3)
+    .map(user => `<div class="card-reasons">${escHtml(user.userName)} · ${user.botMentionCount} tag${user.botMentionCount !== 1 ? 's' : ''}</div>`)
+    .join('');
+  const recent = (discordMentionsSummary.recentMentions || [])
+    .slice(0, 2)
+    .map(item => `<div class="card-text"><strong>${escHtml(item.userName)}:</strong> ${escHtml(item.excerpt || '')}</div>`)
+    .join('');
+
+  return `
+    <div class="slack-card discord-card" style="cursor:default">
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="meta-chip chip-channel">Mentions ${Number(discordMentionsSummary.totalBotMentionCount || 0)}</span>
+          <span class="meta-chip chip-importance-medium">Mention Msgs ${Number(discordMentionsSummary.mentionMessagesCount || 0)}</span>
+          <span class="meta-chip chip-date">DMs ${Number(discordMentionsSummary.directMessagesCount || 0)}</span>
+        </div>
+        ${topUsers ? `<div class="card-context"><span class="context-label">Top users:</span><div>${topUsers}</div></div>` : ''}
+        ${recent ? `<div class="card-summary"><span class="summary-label">Recent:</span><div>${recent}</div></div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
 // ── Selection ─────────────────────────────────────────────────────────────────
 
 function toggleSelect(card, type, id) {
@@ -387,7 +490,7 @@ function toggleSelect(card, type, id) {
 
 function toggleSelectAll(type) {
   const cards = document.querySelectorAll(`#tab-${type} .${type}-card`);
-  const items = type === 'jira' ? jiraIssues : slackMessages;
+  const items = type === 'jira' ? jiraIssues : type === 'slack' ? slackMessages : discordMessages;
   const allSelected = items.every(item => selected[type].has(type === 'jira' ? item.key : item.ts));
 
   cards.forEach(card => {
@@ -409,7 +512,7 @@ function updateSelectedPreview() {
   const items = getSelectedItems();
 
   if (!items.length) {
-    preview.innerHTML = '<p class="preview-empty">No items selected. Go to Jira or Slack tabs to select items.</p>';
+  preview.innerHTML = '<p class="preview-empty">No items selected. Go to Jira or Slack tabs to select items.</p>';
     if (btn) btn.disabled = true;
     return;
   }
@@ -433,6 +536,8 @@ function updateSelectedPreview() {
       ? `<strong>[${escHtml(item.key)}]</strong> ${escHtml(item.summary)}`
       : item.type === 'reminder'
       ? `<strong>[Reminder]</strong> ${escHtml(item.title)}`
+      : item.type === 'discord'
+      ? `<strong>[Discord]</strong> ${escHtml((item.excerpt || item.text || '').slice(0, 55))}…`
       : `<strong>[#${escHtml(item.channelName)}]</strong> ${escHtml(item.text.replace(/<[^>]+>/g, '').slice(0, 55))}…`;
     return `<div class="preview-item"><span class="preview-date">${dateLabel} ~${timeLabel}</span>${tag}</div>`;
   }).join('');
@@ -472,6 +577,10 @@ function getSelectedItems() {
   for (const ts of selected.slack) {
     const msg = slackMessages.find(m => m.ts === ts);
     if (msg) items.push({ ...msg, type: 'slack' });
+  }
+  for (const ts of selected.discord) {
+    const msg = discordMessages.find(m => m.ts === ts);
+    if (msg) items.push({ ...msg, type: 'discord' });
   }
   for (const id of selected.reminder) {
     const r = reminders.find(r => r.id === id);
@@ -726,8 +835,12 @@ async function handleMarkDone(taskId) {
   const scheduledSlackIds = new Set(
     scheduledTasks.filter(t => !t.done && t.sourceType === 'slack').map(t => t.sourceId)
   );
+  const scheduledDiscordIds = new Set(
+    scheduledTasks.filter(t => !t.done && t.sourceType === 'discord').map(t => t.sourceId)
+  );
   renderJira(jiraIssues.filter(i => !scheduledJiraKeys.has(i.key)));
   renderSlack(slackMessages.filter(m => !scheduledSlackIds.has(m.ts)));
+  renderDiscord(discordMessages.filter(m => !scheduledDiscordIds.has(m.ts)));
   updateCounts();
 
   await new Promise(resolve =>
@@ -764,7 +877,7 @@ async function handleScheduleTasks() {
   const items = getSelectedItems();
 
   if (!items.length) {
-    showEventResult('error', 'Select at least one Jira or Slack item first.');
+    showEventResult('error', 'Select at least one Jira, Slack, or Discord item first.');
     return;
   }
 
@@ -783,7 +896,8 @@ async function handleScheduleTasks() {
     // Clear selection and reload task list
     selected.jira.clear();
     selected.slack.clear();
-    document.querySelectorAll('.jira-card.selected, .slack-card.selected').forEach(c => c.classList.remove('selected'));
+    selected.discord.clear();
+    document.querySelectorAll('.jira-card.selected, .slack-card.selected, .discord-card.selected').forEach(c => c.classList.remove('selected'));
     await loadFromCache();
   } else {
     showEventResult('error', `Failed: ${res?.error || 'Unknown error'}`);
@@ -934,6 +1048,7 @@ function showExtResult(type, message) {
 function updateCounts() {
   document.getElementById('jira-count').textContent = jiraIssues.length || '';
   document.getElementById('slack-count').textContent = slackMessages.filter(m => m.importance >= 3).length || '';
+  document.getElementById('discord-count').textContent = discordMessages.filter(m => m.importance >= 3).length || '';
   const reminderBadge = document.getElementById('reminder-count');
   if (reminders.length) {
     reminderBadge.textContent = reminders.length;

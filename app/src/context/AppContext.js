@@ -9,6 +9,8 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [jiraIssues, setJiraIssues] = useState([]);
   const [slackMessages, setSlackMessages] = useState([]);
+  const [discordMessages, setDiscordMessages] = useState([]);
+  const [discordMentionsSummary, setDiscordMentionsSummary] = useState(null);
   const [scheduledTasks, setScheduledTasks] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [jiraCustomFieldValues, setJiraCustomFieldValues] = useState([]);
@@ -25,7 +27,7 @@ export function AppProvider({ children }) {
   const loadFromCache = useCallback(async () => {
     // Read local store first
     const local = await store.getAll([
-      'jiraIssues', 'slackMessages', 'lastSync',
+      'jiraIssues', 'slackMessages', 'discordMessages', 'discordMentionsSummary', 'lastSync',
       'jiraError', 'slackError', 'scheduledTasks', 'reminders',
       'jiraCustomFieldValues', 'jiraCustomFieldId', 'jiraCustomFieldName',
       'jiraBaseUrl',
@@ -37,7 +39,7 @@ export function AppProvider({ children }) {
     await pullCache();
 
     const data = await store.getAll([
-      'jiraIssues', 'slackMessages', 'lastSync',
+      'jiraIssues', 'slackMessages', 'discordMessages', 'discordMentionsSummary', 'lastSync',
       'jiraError', 'slackError', 'scheduledTasks', 'reminders',
       'jiraCustomFieldValues', 'jiraCustomFieldId', 'jiraCustomFieldName',
       'jiraBaseUrl',
@@ -45,6 +47,8 @@ export function AppProvider({ children }) {
 
     setJiraIssues(data.jiraIssues || []);
     setSlackMessages(data.slackMessages || []);
+    setDiscordMessages(data.discordMessages || []);
+    setDiscordMentionsSummary(data.discordMentionsSummary || null);
     setScheduledTasks(data.scheduledTasks || []);
     setReminders(data.reminders || []);
     setJiraCustomFieldValues(data.jiraCustomFieldValues || []);
@@ -68,8 +72,12 @@ export function AppProvider({ children }) {
       // Pull latest from Firestore first (Slack data comes from extension via Firestore)
       await pullCache();
       const result = await syncAll();
+      const discordMessages = (await store.get('discordMessages')) || [];
+      const discordMentionsSummary = (await store.get('discordMentionsSummary')) || null;
       setJiraIssues(result.jiraIssues || []);
       setSlackMessages(result.slackMessages || []);
+      setDiscordMessages(discordMessages);
+      setDiscordMentionsSummary(discordMentionsSummary);
       setJiraError(result.jiraError || null);
       setLastSync(new Date().toISOString());
     } catch (e) {
@@ -101,13 +109,15 @@ export function AppProvider({ children }) {
       await pullGoogleToken();
       await pullCache();
       const data = await store.getAll([
-        'jiraIssues', 'slackMessages', 'lastSync',
+        'jiraIssues', 'slackMessages', 'discordMessages', 'discordMentionsSummary', 'lastSync',
         'jiraError', 'slackError', 'scheduledTasks', 'reminders',
         'jiraCustomFieldValues', 'jiraCustomFieldId', 'jiraCustomFieldName',
         'jiraBaseUrl',
       ]);
       setJiraIssues(data.jiraIssues || []);
       setSlackMessages(data.slackMessages || []);
+      setDiscordMessages(data.discordMessages || []);
+      setDiscordMentionsSummary(data.discordMentionsSummary || null);
       setScheduledTasks(data.scheduledTasks || []);
       setReminders(data.reminders || []);
       setJiraCustomFieldValues(data.jiraCustomFieldValues || []);
@@ -148,6 +158,8 @@ export function AppProvider({ children }) {
       value={{
         jiraIssues,
         slackMessages,
+        discordMessages,
+        discordMentionsSummary,
         scheduledTasks,
         reminders,
         jiraCustomFieldValues,
